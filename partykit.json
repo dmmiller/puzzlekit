@@ -1,8 +1,8 @@
 {
   "name": "buffalo-regular",
-  "main": "src/server.ts",
+  "main": "src/server/server.ts",
   "serve": {
     "path": "public",
-    "build": "src/client.ts"
+    "build": "src/client/*.*"
   }
 }
