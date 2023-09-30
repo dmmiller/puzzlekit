@@ -3,6 +3,6 @@
   "main": "src/server/server.ts",
   "serve": {
     "path": "public",
-    "build": "src/client/*.*"
+    "build": "src/client/client.ts"
   }
 }

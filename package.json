@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "partykit dev",
-    "deploy": "partykit deploy"
+    "deploy": "partykit deploy",
+    "build": "cp ./src/client/puzzlejs/* ./public/dist/."
   },
   "dependencies": {
     "partysocket": "0.0.8"

@@ -2,7 +2,7 @@
  * This code is licensed under the MIT License.
  * https://github.com/tabascq/PuzzleJS
  */
- .puzzle-entry {
+.puzzle-entry {
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
