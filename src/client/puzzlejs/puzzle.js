@@ -47,7 +47,9 @@ puzzleModes["default"] = {
     "data-extracts": null,
     "data-no-input": false,
     "data-show-commands": false,
-    "data-state-key": null
+    "data-puzzle-id": null,
+    "data-team-id": null,
+    "data-player-id": null
 };
 
 puzzleModes["linear"] = {
@@ -116,16 +118,16 @@ function UndoManager() {
 
     this.undoUnits = function(puzzle, units) {
         var changes = [];
-        units.forEach(u => { changes.push({locationKey: u.elem.id, propertyKey: u.propertyKey, value: u.oldValue, playerId: puzzle.playerId}); });
+        units.forEach(u => { changes.push({puzzleId: puzzle.puzzleId, teamId: puzzle.container.getAttribute("data-team-id"), locationKey: u.elem.id, propertyKey: u.propertyKey, value: u.oldValue, playerId: puzzle.container.getAttribute("data-player-id")}); });
         puzzle.changeWithoutUndo(changes);
-        if (puzzle.listener) { puzzle.listener(changes); }
+        puzzle.container.dispatchEvent(new CustomEvent("puzzlechanged", { detail: changes, bubbles: true }));
     }
 
     this.redoUnits = function(puzzle, units) {
         var changes = [];
-        units.forEach(u => { changes.push({locationKey: u.elem.id, propertyKey: u.propertyKey, value: u.newValue, playerId: puzzle.playerId}); });
+        units.forEach(u => { changes.push({puzzleId: puzzle.puzzleId, teamId: puzzle.container.getAttribute("data-team-id"), locationKey: u.elem.id, propertyKey: u.propertyKey, value: u.newValue, playerId: puzzle.container.getAttribute("data-player-id")}); });
         puzzle.changeWithoutUndo(changes);
-        if (puzzle.listener) { puzzle.listener(changes); }
+        puzzle.container.dispatchEvent(new CustomEvent("puzzlechanged", { detail: changes, bubbles: true }));
     }
 
     this.undo = function() {
@@ -202,8 +204,8 @@ function PuzzleEntry(p, index) {
     this.pointerIsDown = false;
     this.lastCell = null;
     this.currentFill = null;
-    this.stateKey = this.options["data-state-key"];
-    if (!this.stateKey) { this.stateKey = window.location.href + "|" + index; }
+    this.puzzleId = this.options["data-puzzle-id"];
+    if (!this.puzzleId) { this.puzzleId = window.location.pathname + "|" + index; }
     this.inhibitSave = false;
     this.xKeyMode = false;
 
@@ -429,11 +431,6 @@ function PuzzleEntry(p, index) {
         return target.querySelector(".text span").innerText;
     }
 
-    this.registerForCoop = function(playerId, listener) {
-        this.playerId = playerId;
-        this.listener = listener;
-    }
-
     this.changeWithoutUndo = function(changes) {
         var changedElems = [];
         var svgChangedElems = [];
@@ -447,7 +444,7 @@ function PuzzleEntry(p, index) {
             elems.forEach(elem => {
                 if (!changedElems.includes(elem)) { changedElems.push(elem); }
 
-                if (this.listener) { elem.setAttribute("data-coop-" + c.propertyKey.replace("data-", "") + "-playerId", c.playerId); }
+                if (c.playerId) { elem.setAttribute("data-coop-" + c.propertyKey.replace("data-", "") + "-playerId", c.playerId); }
 
                 switch(c.propertyKey) {
                     case "text":
@@ -914,7 +911,7 @@ function PuzzleEntry(p, index) {
     }
 
     this.prepareToReset = function() {
-        localStorage.removeItem(this.stateKey);
+        localStorage.removeItem(this.puzzleId);
 
         this.table.querySelectorAll(".inner-cell.extract .text span").forEach(s => {
             var extractId = s.getAttribute("data-extract-id");
@@ -961,8 +958,8 @@ function PuzzleEntry(p, index) {
             stateArray.push(cellState);
         });
 
-        if (hasState) { localStorage.setItem(this.stateKey, stateArray.join("|")); }
-        else { localStorage.removeItem(this.stateKey); }
+        if (hasState) { localStorage.setItem(this.puzzleId, stateArray.join("|")); }
+        else { localStorage.removeItem(this.puzzleId); }
     }
 
     this.setCornerFocusMode = function(notyet) {
@@ -1109,7 +1106,7 @@ function PuzzleEntry(p, index) {
     var regularRowBorder = 0;
     var regularColBorder = 0;
 
-    var savedState = localStorage.getItem(this.stateKey);
+    var savedState = localStorage.getItem(this.puzzleId);
     if (savedState) { savedState = savedState.split("|"); }
 
     if (!allowInput) {

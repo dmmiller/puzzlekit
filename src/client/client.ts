@@ -1,4 +1,10 @@
-import type { Change, PuzzleEntry } from "../components/puzzleTypes";
+import type {
+  Change,
+  ClientMessage,
+  PuzzleEntry,
+  PuzzleEvent,
+  ServerMessage,
+} from "../components/puzzleTypes";
 import "./styles.css";
 
 import PartySocket from "partysocket";
@@ -25,36 +31,46 @@ const conn = new PartySocket({
 let puzzleEntry: PuzzleEntry | null = null;
 const alternatesSet = new Set<string>();
 document.addEventListener("DOMContentLoaded", () => {
-  puzzleEntry = document.querySelector(".puzzle-entry")?.puzzleEntry;
+  const puzzleElement = document.querySelector(".puzzle-entry");
+  puzzleElement?.setAttribute("data-team-id", conn.id);
+  puzzleEntry = puzzleElement?.puzzleEntry;
   puzzleEntry!.prepareToReset();
-  puzzleEntry!.registerForCoop(conn.id, (changes: Change[]) => {
-    console.log(changes);
-    if (changes[0].propertyKey === "class-small-text") {
-      if (changes[0].value === "small-text") {
-        alternatesSet.add(changes[0].locationKey);
+});
+
+document.addEventListener("puzzlechanged", (e: Event) => {
+  const changes: Change[] = (e as PuzzleEvent).detail;
+  changes.forEach((change) => {
+    if (change.propertyKey === "class-small-text") {
+      if (change.value === "small-text") {
+        alternatesSet.add(change.locationKey);
       } else {
-        alternatesSet.delete(changes[0].locationKey);
+        alternatesSet.delete(change.locationKey);
       }
       return;
     }
-    if (alternatesSet.has(changes[0].locationKey)) {
+    if (alternatesSet.has(change.locationKey)) {
       return;
     }
-    const changesString = JSON.stringify(changes);
-    conn.send(changesString);
+    const clientMessage: ClientMessage = {
+      change,
+    };
+    conn.send(JSON.stringify(clientMessage));
   });
 });
 
 // You can even start sending messages before the connection is open!
 conn.addEventListener("message", (event) => {
-  // add(`Received -> ${event.data}`);
-  const changes: Change[] = JSON.parse(event.data);
+  // currently handling both revert and change messages the same
+  const serverMessage: ServerMessage = JSON.parse(event.data);
+  const changes = serverMessage.changes;
   if (alternatesSet.has(changes[0].locationKey)) {
     changes.unshift({
+      puzzleId: changes[0].puzzleId,
       locationKey: changes[0].locationKey,
       propertyKey: "class-small-text",
       value: null,
       playerId: changes[0].playerId,
+      teamId: changes[0].teamId,
     });
   }
   puzzleEntry!.changeWithoutUndo(changes);

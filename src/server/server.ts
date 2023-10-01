@@ -1,5 +1,10 @@
 import type * as Party from "partykit/server";
-import type { Change } from "../components/puzzleTypes";
+import type {
+  Change,
+  ClientMessage,
+  ServerChangeMessage,
+  ServerRevertMessage,
+} from "../components/puzzleTypes";
 
 const puzzle = ["PYLA", "ALYP", "YPAL", "LAPY"];
 const keys: Record<string, string> = {};
@@ -26,7 +31,11 @@ export default class Server implements Party.Server {
 
     // let's send a message to the connection
     if (this.changes.length > 0) {
-      conn.send(JSON.stringify(this.changes));
+      const changeMessage: ServerChangeMessage = {
+        type: "change",
+        changes: this.changes,
+      };
+      conn.send(JSON.stringify(changeMessage));
     }
   }
 
@@ -34,22 +43,31 @@ export default class Server implements Party.Server {
     // let's log the message
     console.log(`connection ${sender.id} sent message: ${message}`);
 
-    const proposedChanges: Change[] = JSON.parse(message);
-    const value = proposedChanges[0].value;
-    const location = proposedChanges[0].locationKey;
+    const { change }: ClientMessage = JSON.parse(message);
+    const value = change.value;
+    const location = change.locationKey;
     if (keys[location] !== value) {
       console.log("INVALID VALUE");
-      proposedChanges[0].value = null;
-      sender.send(JSON.stringify(proposedChanges));
+      change.value = null;
+      const revertMessage: ServerRevertMessage = {
+        type: "revert",
+        changes: [change],
+      };
+      sender.send(JSON.stringify(revertMessage));
       return;
     }
 
-    this.changes.push(...proposedChanges);
-    console.log(this.changes);
+    // Add to our list changes
+    this.changes.push(change);
+
+    const changeMessage: ServerChangeMessage = {
+      type: "change",
+      changes: [change],
+    };
 
     // as well as broadcast it to all the other connections in the room...
     this.party.broadcast(
-      message,
+      JSON.stringify(changeMessage),
       // `${sender.id}: ${message}`,
       // ...except for the connection it came from
       [sender.id]
