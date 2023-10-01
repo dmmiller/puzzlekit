@@ -33,6 +33,7 @@ const alternatesSet = new Set<string>();
 document.addEventListener("DOMContentLoaded", () => {
   const puzzleElement = document.querySelector(".puzzle-entry");
   puzzleElement?.setAttribute("data-team-id", conn.id);
+  puzzleElement?.setAttribute("data-player-id", conn.id);
   puzzleEntry = puzzleElement?.puzzleEntry;
   puzzleEntry!.prepareToReset();
 });
